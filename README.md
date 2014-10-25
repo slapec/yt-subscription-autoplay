@@ -4,9 +4,9 @@ Play videos automatically in your Youtube subscription feed.
 ### How?
 #### Using a bookmarklet
 1. Add the bookmarklet below to your bookmarks:
-    ```javascript
-    javascript:(function(){var tag=document.createElement('script');tag.src='https://cdn.rawgit.com/slapec/yt-subscription-autoplay/master/dist/yt-subscription-autoplay.min.js';document.body.appendChild(tag)})()
-    ```
+```javascript
+javascript:(function(){var tag=document.createElement('script');tag.src='https://cdn.rawgit.com/slapec/yt-subscription-autoplay/master/dist/yt-subscription-autoplay.min.js';document.body.appendChild(tag)})()
+```
 2. Open a [collection](https://support.google.com/youtube/answer/3123405) on Youtube
     - The script works in collections only *at the moment*
 3. Use the bookmarklet
