@@ -202,7 +202,7 @@
 
                             var videoIndex = 0;
                             for(videoIndex; videoList[videoIds[videoIndex]].watched; videoIndex++){}
-                            next = videoList[videoIndex];
+                            next = videoIds[videoIndex];
 
                             if(next !== undefined) {
                                 player.loadVideoById(next);
