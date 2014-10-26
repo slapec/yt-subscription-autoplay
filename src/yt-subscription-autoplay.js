@@ -1,4 +1,5 @@
 /* global YT */
+//@ sourceURL=yt-dev.js
 (function(){
     'use strict';
     var IFRAME_API_PATH = 'https://www.youtube.com/iframe_api';
@@ -119,6 +120,11 @@
 
         for(var id in videoList){
             tbody.appendChild(createPlaylistElement(videoList[id]));
+        }
+
+        // Mark nowPlaying
+        if(nowPlaying !== undefined){
+            document.getElementById(nowPlaying).classList.add('now-playing');
         }
 
         // Add "Load More"
