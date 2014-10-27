@@ -18,7 +18,8 @@
         '.now-playing {background: #A7EF91!important}' +
         '.player-full {position: fixed; top: 0; left: 0; right: 0; background: rgba(0, 0, 0, .5); padding: 4px}' +
         '.playlist-full {width: 100%}' +
-        '#seekBar {display: block; width: 100%}';
+        '#seekBar {display: block; width: 100%; margin: auto}' +
+        '#playButton {width: 45px}';
 
     var updaterId = null;
     var videoList = {};
@@ -27,6 +28,23 @@
 
     var body;
     var playlist;
+
+    var playbackMethods = {
+        unwatched: function(){
+            var videoIds = Object.keys(videoList);
+
+            var videoIndex = 0;
+            for(videoIndex; videoList[videoIds[videoIndex]].watched; videoIndex++){}
+            return videoIds[videoIndex];
+        },
+        inOrder: function(){
+            var videoIds = Object.keys(videoList);
+            var actual = videoIds.indexOf(nowPlaying);
+            return videoIds[actual + 1];
+        }
+    };
+
+    var getNextVideoId = playbackMethods.unwatched;
 
     var getFeedURI = function(){
       var parts = window.location.pathname.split('/');
@@ -57,6 +75,12 @@
     };
 
     var createPlayerControls = function(){
+        var createOption = function(text){
+            var option = document.createElement('option');
+            option.text = text;
+            return option;
+        };
+
         var controlsDiv = document.createElement('div');
         controlsDiv.id = 'controls';
 
@@ -107,11 +131,15 @@
         };
 
         var volumeBar = document.createElement('input');
+        controls.volumeBar = {
+            element: volumeBar
+        };
         volumeBar.id = 'volumeBar';
         volumeBar.classList.add('control-left');
         volumeBar.type = 'range';
         volumeBar.min = 0;
         volumeBar.max = 100;
+        volumeBar.value = 0;
         volumeBar.oninput = function (event) {
           window.player.setVolume(event.target.value);
         };
@@ -124,6 +152,7 @@
         seekBar.id = 'seekBar';
         seekBar.type = 'range';
         seekBar.min = 0;
+        seekBar.value = 0;
         seekBar.onchange = function(event){
             window.player.seekTo(event.target.value);
         };
@@ -135,11 +164,27 @@
             controls.seekBar.pressed = false;
         };
 
+        var playbackMethod = document.createElement('select');
+        playbackMethod.classList.add('control-right');
+        playbackMethod.onchange = function(event){
+            var method = event.target.querySelector('option:checked').value;
+            getNextVideoId = playbackMethods[method];
+        };
+
+        var unwatched = createOption('Unwatched');
+        unwatched.value = 'unwatched';
+        playbackMethod.appendChild(unwatched);
+
+        var inOrder = createOption('In order');
+        inOrder.value = 'inOrder';
+        playbackMethod.appendChild(inOrder);
+
         controlsDiv.appendChild(seekBar);
         controlsDiv.appendChild(playButton);
         controlsDiv.appendChild(volumeBar);
         controlsDiv.appendChild(likeButton);
         controlsDiv.appendChild(toggleVideo);
+        controlsDiv.appendChild(playbackMethod);
         return controlsDiv;
     };
 
@@ -303,38 +348,35 @@
                             }
 
                             controls.seekBar.element.max = window.player.getDuration();
+                            controls.playButton.element.value = controls.playButton.icons.pause;
+
                             updaterId = setInterval(function(){
                                 if(!controls.seekBar.pressed){
                                     controls.seekBar.element.value = window.player.getCurrentTime();
                                 }
                             }, 500);
-
-                            controls.playButton.value = controls.playButton.icons.pause;
                         }
                         if(state === YT.PlayerState.PAUSED){
                             clearInterval(updaterId);
                             updaterId = null;
-                            controls.playButton.value = controls.playButton.icons.play;
+                            controls.playButton.element.value = controls.playButton.icons.play;
                         }
                         if(state === YT.PlayerState.UNSTARTED){
                             clearInterval(updaterId);
                             controls.seekBar.element.min = 0;
                             updaterId = null;
-                            controls.playButton.value = controls.playButton.icons.play;
+                            controls.playButton.element.value = controls.playButton.icons.play;
                         }
                         if(state === YT.PlayerState.ENDED){
-                            var next;
-                            var videoIds = Object.keys(videoList);
-
-                            var videoIndex = 0;
-                            for(videoIndex; videoList[videoIds[videoIndex]].watched; videoIndex++){}
-                            next = videoIds[videoIndex];
-
+                            var next = getNextVideoId();
                             if(next !== undefined) {
                                 player.loadVideoById(next);
                             }
-                            controls.playButton.value = controls.playButton.icons.play;
+                            controls.playButton.element.value = controls.playButton.icons.play;
                         }
+                    },
+                    onReady: function(){
+                        controls.volumeBar.element.value = window.player.getVolume();
                     }
                 }
             });
