@@ -1,4 +1,5 @@
 /* global YT */
+/* global yt */
 //@ sourceURL=yt-dev.js
 (function(){
     'use strict';
@@ -230,16 +231,17 @@
         return soup.parseFromString(str, 'text/html');
     };
 
-    var sAjax = function(url, callback, _parse, _post){
+    var sAjax = function(url, callback, _parse, _post, _data) {
+        // TODO: Rewrite this function to accept a single object
         var parse = (typeof _parse === 'undefined') ? true : _parse;
-        var post = (typeof _post === 'undefined') ? true: _post;
+        var post = (typeof _post === 'undefined') ? true : _post;
 
         var xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = function(){
-            if(xhr.readyState === 4 &&
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4 &&
                 (xhr.status === 200 || xhr.status === 204) &&
-                callback){
-                if(parse){
+                callback) {
+                if (parse) {
                     callback(JSON.parse(xhr.responseText));
                 }
                 else {
@@ -247,8 +249,15 @@
                 }
             }
         };
-        xhr.open('GET', url, true);
-        xhr.send();
+        if (post) {
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+            xhr.send(_data);
+        }
+        else {
+            xhr.open('GET', url, true);
+            xhr.send();
+        }
     };
 
     var markWatched = function(video){
@@ -263,18 +272,33 @@
     };
 
     var toggleLiked = function() {
-        if(window.player.getPlayerState() in [YT.PlayerState.PLAYING, YT.PlayerState.PAUSED]){
+        if([YT.PlayerState.PLAYING, YT.PlayerState.PAUSED].indexOf(window.player.getPlayerState()) > -1){
             var token = yt.getConfig('XSRF_TOKEN');
             var likeButton = controls.likeButton;
 
+            var post = 'screen=h%3D1080%26w%3D1920%26d%3D24&session_token=' + encodeURIComponent(token);
 
             if(likeButton.full){
-                likeButton.element.value = likeButton.icons.empty;
-                likeButton.full = false;
+                // Removing liked status
+                sAjax('https://www.youtube.com/watch_actions_ajax?action_indifferent_video=1&video_id=' + nowPlaying,
+                    function(data){
+                        console.log(data);
+
+                        likeButton.element.value = likeButton.icons.empty;
+                        likeButton.full = false;
+                    },
+                    false, true, post);
             }
             else {
-                likeButton.element.value = likeButton.icons.full;
-                likeButton.full = true;
+                // Adding liked status
+                sAjax('https://www.youtube.com/watch_actions_ajax?action_like_video=1&video_id=' + nowPlaying,
+                    function(data){
+                        console.log(data);
+
+                        likeButton.element.value = likeButton.icons.full;
+                        likeButton.full = true;
+                    },
+                    false, true, post);
             }
         }
     };
