@@ -4,20 +4,26 @@
     'use strict';
     var IFRAME_API_PATH = 'https://www.youtube.com/iframe_api';
     var MARK_WATCHED_PATH = 'https://www.youtube.com/user_watch?video_id=';
+    var GET_VIDEO_INFO_PATH = 'https://www.youtube.com/get_video_info?video_id=';
+
+    var SENTIMENT = {
+        NONE: 2,
+        DISLIKE: 1,
+        LIKE: 0
+    };
 
     var STYLESHEET =
         'body {margin: 0}' +
         'iframe {display: none; margin: auto}' +
-        'table {border-collapse: collapse}' +
-        'tr {cursor: pointer}' +
+        'table {border-collapse: collapse; width: 100%}' +
+        'tr {cursor: pointer; border-right: 6px solid #A7EF91}' +
         'tr:nth-child(even) {background: #F3F3F3}' +
-        'tr:hover {background: #BBEDFB}' +
+        'tr:hover {background: #A7EF91}' +
         '.control-right {float: right; margin-left: 2px}' +
         '.control-left {float: left; margin-right: 2px}' +
-        '.watched td:nth-child(2) {border-right: 6px solid #F6BDBC}' +
+        '.watched {border-right: 6px solid #F9CD5D}' +
         '.now-playing {background: #A7EF91!important}' +
         '.player-full {position: fixed; top: 0; left: 0; right: 0; background: rgba(0, 0, 0, .5); padding: 4px}' +
-        '.playlist-full {width: 100%}' +
         '#seekBar {display: block; width: 100%; margin: auto}' +
         '#playButton {width: 45px}';
 
@@ -49,6 +55,31 @@
     var getFeedURI = function(){
       var parts = window.location.pathname.split('/');
       return parts[parts.length - 1];
+    };
+
+    var getParameterByName = function(_key, data){
+        // Original source: http://stackoverflow.com/a/901144/1069572
+        var key = _key.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + key + "=([^&#]*)");
+        var results = regex.exec(data);
+        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    };
+
+    var setupLikeButton = function(){
+        var path = GET_VIDEO_INFO_PATH + nowPlaying;
+
+        sAjax(path, function (data) {
+            var sentiment = parseInt(getParameterByName('sentiment', data));
+
+            if(sentiment === SENTIMENT.LIKE){
+                controls.likeButton.element.value = controls.likeButton.icons.full;
+                controls.likeButton.full = true;
+            }
+            else {
+                controls.likeButton.element.value = controls.likeButton.icons.empty;
+                controls.likeButton.full = false;
+            }
+        }, false);
     };
 
     var createPlaylistElement = function(video){
@@ -122,13 +153,19 @@
         };
 
         var likeButton = document.createElement('input');
+        controls.likeButton = {
+            element: likeButton,
+            icons: {
+                full: '★',
+                empty: '✩'
+            },
+            full: false
+        };
         likeButton.id = 'likeButton';
         likeButton.type = 'button';
         likeButton.classList.add('control-right');
-        likeButton.value = '✩';
-        likeButton.onclick = function(){
-            console.log('like');
-        };
+        likeButton.value = controls.likeButton.icons.empty;
+        likeButton.onclick = toggleLiked;
 
         var volumeBar = document.createElement('input');
         controls.volumeBar = {
@@ -193,8 +230,9 @@
         return soup.parseFromString(str, 'text/html');
     };
 
-    var sAjax = function(url, callback, _parse){
-        var parse = (typeof _parse === "undefined") ? true : _parse;
+    var sAjax = function(url, callback, _parse, _post){
+        var parse = (typeof _parse === 'undefined') ? true : _parse;
+        var post = (typeof _post === 'undefined') ? true: _post;
 
         var xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function(){
@@ -221,6 +259,23 @@
                 document.getElementById(nowPlaying).classList.add('watched');
                 videoList[nowPlaying].watched = true;
             }, false);
+        }
+    };
+
+    var toggleLiked = function() {
+        if(window.player.getPlayerState() in [YT.PlayerState.PLAYING, YT.PlayerState.PAUSED]){
+            var token = yt.getConfig('XSRF_TOKEN');
+            var likeButton = controls.likeButton;
+
+
+            if(likeButton.full){
+                likeButton.element.value = likeButton.icons.empty;
+                likeButton.full = false;
+            }
+            else {
+                likeButton.element.value = likeButton.icons.full;
+                likeButton.full = true;
+            }
         }
     };
 
@@ -315,7 +370,6 @@
         playlist = document.createElement('table');
         body.appendChild(playlist);
         playlist.id = 'playlist';
-        playlist.classList.add('playlist-full');
         playlist.style.marginTop = player.clientHeight + 'px';
 
         // Start loading the first page
@@ -355,6 +409,8 @@
                                     controls.seekBar.element.value = window.player.getCurrentTime();
                                 }
                             }, 500);
+
+                            setupLikeButton();
                         }
                         if(state === YT.PlayerState.PAUSED){
                             clearInterval(updaterId);
@@ -384,11 +440,8 @@
     }());
 
     return {
-        getVideoList: function(){
-            return videoList;
-        },
-        getNowPlaying: function(){
-            return videoList[nowPlaying];
+        getControls: function(){
+            return controls;
         }
     };
 }());
