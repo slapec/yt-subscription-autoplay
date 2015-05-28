@@ -1,3 +1,6 @@
+# This project does not work anymore
+Thank you for killing [collections](https://support.google.com/youtube/answer/6233832?hl=en)
+
 ## youtube-subscription-autoplay
 Play videos automatically in your Youtube subscription feed.
 
